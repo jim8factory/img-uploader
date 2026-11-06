@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像アップロード・自動仕分け</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .upload-area {
+            border: 2px dashed #007bff;
+            padding: 30px;
+            text-align: center;
+            background: #fff;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        .upload-area:hover {
+            background: #f0f7ff;
+        }
+        #file-input {
+            display: none;
+        }
+        
+        /* 区分け（カテゴリー）ごとのエリア設定 */
+        .category-section {
+            margin-top: 30px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .category-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #eee;
+        }
+        .category-title.photos { border-color: #ffc107; }
+        .category-title.illustrations { border-color: #28a745; }
+        .category-title.others { border-color: #6c757d; }
+
+        .preview-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        .thumbnail-wrapper {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #eee;
+        }
+        .thumbnail-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .file-name-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            font-size: 10px;
+            padding: 4px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>画像アップロード（自動仕分け機能付き）</h2>
+    
+    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+        <p>ここをクリックして画像を選択してください（複数選択可）</p>
+        <p style="font-size: 0.85rem; color: #666;">※ファイル名に「photo」が含まれるか、拡張子(png/gif)によって自動で仕分けされます</p>
+        <input type="file" id="file-input" accept="image/*" multiple>
+    </div>
+
+    <!-- 1. 写真エリア -->
+    <div class="category-section">
+        <div class="category-title photos">📸 写真 (ファイル名に「photo」を含む、または jpg/jpeg)</div>
+        <div class="preview-container" id="container-photos"></div>
+    </div>
+
+    <!-- 2. イラスト・素材エリア -->
+    <div class="category-section">
+        <div class="category-title illustrations">🎨 イラスト・透過素材 (拡張子が png / gif)</div>
+        <div class="preview-container" id="container-illustrations"></div>
+    </div>
+
+    <!-- 3. その他エリア -->
+    <div class="category-section">
+        <div class="category-title others">📁 その他</div>
+        <div class="preview-container" id="container-others"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        
+        // それぞれのコンテナを取得
+        const containers = {
+            photos: document.getElementById('container-photos'),
+            illustrations: document.getElementById('container-illustrations'),
+            others: document.getElementById('container-others')
+        };
+
+        fileInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+
+            Array.from(files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+
+                const fileName = file.name.toLowerCase();
+                let targetContainer;
+
+                // 【自動仕分けロジック】
+                // 1. ファイル名に「photo」が含まれている、または拡張子が jpg/jpeg の場合
+                if (fileName.includes('photo') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+                    targetContainer = containers.photos;
+                } 
+                // 2. 拡張子が png / gif の場合（主にイラストや透過アイコンなど）
+                else if (fileName.endsWith('.png') || fileName.endsWith('.gif')) {
+                    targetContainer = containers.illustrations;
+                } 
+                // 3. それ以外（webp, bmp など）
+                else {
+                    targetContainer = containers.others;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.classList.add('thumbnail-wrapper');
+
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = file.name;
+
+                    // 確認用にファイル名ラベルをサムネイル下部に表示
+                    const label = document.createElement('div');
+                    label.classList.add('file-name-label');
+                    label.textContent = file.name;
+
+                    wrapper.appendChild(img);
+                    wrapper.appendChild(label);
+                    
+                    // 判定されたコンテナに追加
+                    targetContainer.appendChild(wrapper);
+                };
+
+                reader.readAsDataURL(file);
+            });
+
+            fileInput.value = '';
+        });
+    </script>
+
+</body>
+</html>
